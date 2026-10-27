@@ -1,8 +1,22 @@
 import os
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 load_dotenv()
+
+# INTERCEPTOR GLOBAL: Atrapa cualquier intento de conexión a la base de datos
+# y le inyecta el diccionario SSL nativo directamente a PyMySQL.
+@event.listens_for(Engine, "do_connect")
+def add_ssl_to_pymysql(dialect, conn_rec, cargs, cparams):
+    host = os.environ.get('MYSQL_HOST', 'localhost')
+    # Solo inyectamos el SSL si nos conectamos a TiDB (no en local)
+    if host != 'localhost' and 'pymysql' in dialect.driver:
+        cparams["ssl"] = {
+            "ca": "/etc/ssl/certs/ca-certificates.crt",
+            "check_hostname": False
+        }
 
 def _bool(env_value, default=False):
     if env_value is None:
@@ -15,7 +29,7 @@ class Config:
     MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 4000))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
     
-    # Codificamos la contraseña para seguridad en la URL
+    # Contraseña codificada de forma segura
     raw_password = os.environ.get('MYSQL_PASSWORD', '')
     MYSQL_PASSWORD = quote_plus(raw_password) if raw_password else ''
     
@@ -26,12 +40,8 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # LA SOLUCIÓN: Solo el parámetro ssl_ca. SQLAlchemy lo convertirá internamente 
-    # en el diccionario SSL que PyMySQL necesita, activando la conexión segura.
-    if MYSQL_HOST != 'localhost':
-        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?ssl_ca=/etc/ssl/certs/ca-certificates.crt"
-    else:
-        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+    # URL 100% limpia. El interceptor de arriba se encarga de todo el SSL
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
