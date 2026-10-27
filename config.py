@@ -8,10 +8,12 @@ def _bool(env_value, default=False):
     return str(env_value).lower() in ('1', 'true', 'yes', 'on')
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY')  # En prod debe ser obligatoria
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
+    MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 3306))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
     MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', '')
+    
     TESTING = os.environ.get('FLASK_ENV') == 'testing'
     
     if TESTING:
@@ -19,7 +21,19 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # Cookie security flags (se leen desde env y se convierten correctamente)
+    # Configuración de SQLAlchemy con soporte para SSL obligatorio (TiDB Cloud)
+    # Si estamos en producción o cloud, activamos SSL para evitar el error 1105
+    mysql_url = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+    
+    # Si hay host remoto (no localhost), añadimos los parámetros de SSL requeridos por TiDB
+    if MYSQL_HOST != 'localhost':
+        SQLALCHEMY_DATABASE_URI = f"{mysql_url}?ssl_verify_cert=true"
+    else:
+        SQLALCHEMY_DATABASE_URI = mysql_url
+
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Cookie security flags
     SESSION_COOKIE_SECURE = _bool(os.environ.get('SESSION_COOKIE_SECURE'), False)
     SESSION_COOKIE_HTTPONLY = _bool(os.environ.get('SESSION_COOKIE_HTTPONLY'), True)
     SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
