@@ -26,18 +26,14 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # URL completamente limpia, sin parámetros SSL al final
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-
-    # Pasamos el certificado SSL directamente al motor de PyMySQL mediante un diccionario
+    # Al usar SQLAlchemy puro, los parámetros SSL DEBEN ir en la URL
     if MYSQL_HOST != 'localhost':
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "connect_args": {
-                "ssl": {
-                    "ca": "/etc/ssl/certs/ca-certificates.crt"
-                }
-            }
-        }
+        SQLALCHEMY_DATABASE_URI = (
+            f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+            f"?ssl_ca=/etc/ssl/certs/ca-certificates.crt&ssl_verify_cert=true&ssl_verify_identity=true"
+        )
+    else:
+        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
