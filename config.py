@@ -1,5 +1,7 @@
 import os
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
+
 load_dotenv()
 
 def _bool(env_value, default=False):
@@ -10,9 +12,12 @@ def _bool(env_value, default=False):
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
-    MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 3306))
+    MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 4000))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
-    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', '')
+    
+    # Codificamos la contraseña para evitar que caracteres especiales rompan la URL
+    raw_password = os.environ.get('MYSQL_PASSWORD', '')
+    MYSQL_PASSWORD = quote_plus(raw_password) if raw_password else ''
     
     TESTING = os.environ.get('FLASK_ENV') == 'testing'
     
@@ -21,20 +26,13 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # Configuración de la URI con SSL obligatorio para TiDB Cloud mediante parámetros en la URL
+    # Configuración de la URI con SSL obligatorio para TiDB Cloud
     if MYSQL_HOST != 'localhost':
-        # TiDB Cloud exige SSL; pasamos el argumento ssl a PyMySQL a través de la query string
+        # Añadimos la ruta de certificados de Render y la verificación de identidad
         SQLALCHEMY_DATABASE_URI = (
             f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-            f"?ssl_verify_cert=true"
+            f"?ssl_ca=/etc/ssl/certs/ca-certificates.crt&ssl_verify_cert=true&ssl_verify_identity=true"
         )
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "connect_args": {
-                "ssl": {
-                    "check_hostname": False
-                }
-            }
-        }
     else:
         SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
