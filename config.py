@@ -15,7 +15,7 @@ class Config:
     MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 4000))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
     
-    # Codificamos la contraseña para seguridad en la URL
+    # Codificamos la contraseña
     raw_password = os.environ.get('MYSQL_PASSWORD', '')
     MYSQL_PASSWORD = quote_plus(raw_password) if raw_password else ''
     
@@ -26,18 +26,25 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # Al usar SQLAlchemy puro, los parámetros SSL DEBEN ir en la URL
+    # VOLVEMOS A LA ESTRUCTURA EXACTA QUE TE FUNCIONÓ (La que dio el error 1045)
     if MYSQL_HOST != 'localhost':
         SQLALCHEMY_DATABASE_URI = (
             f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-            f"?ssl_ca=/etc/ssl/certs/ca-certificates.crt&ssl_verify_cert=true&ssl_verify_identity=true"
+            f"?ssl_verify_cert=true"
         )
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "ssl": {
+                    "check_hostname": False,
+                    "ca": "/etc/ssl/certs/ca-certificates.crt"
+                }
+            }
+        }
     else:
         SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Cookie security flags
     SESSION_COOKIE_SECURE = _bool(os.environ.get('SESSION_COOKIE_SECURE'), False)
     SESSION_COOKIE_HTTPONLY = _bool(os.environ.get('SESSION_COOKIE_HTTPONLY'), True)
     SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
