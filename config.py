@@ -15,7 +15,7 @@ class Config:
     MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 4000))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
     
-    # Codificamos la contraseña
+    # Codificamos la contraseña para seguridad en la URL
     raw_password = os.environ.get('MYSQL_PASSWORD', '')
     MYSQL_PASSWORD = quote_plus(raw_password) if raw_password else ''
     
@@ -26,20 +26,10 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # VOLVEMOS A LA ESTRUCTURA EXACTA QUE TE FUNCIONÓ (La que dio el error 1045)
+    # LA SOLUCIÓN: Solo el parámetro ssl_ca. SQLAlchemy lo convertirá internamente 
+    # en el diccionario SSL que PyMySQL necesita, activando la conexión segura.
     if MYSQL_HOST != 'localhost':
-        SQLALCHEMY_DATABASE_URI = (
-            f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-            f"?ssl_verify_cert=true"
-        )
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "connect_args": {
-                "ssl": {
-                    "check_hostname": False,
-                    "ca": "/etc/ssl/certs/ca-certificates.crt"
-                }
-            }
-        }
+        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?ssl_ca=/etc/ssl/certs/ca-certificates.crt"
     else:
         SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
