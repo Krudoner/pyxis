@@ -21,15 +21,18 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # Configuración de SQLAlchemy con soporte para SSL obligatorio (TiDB Cloud)
-    # Si estamos en producción o cloud, activamos SSL para evitar el error 1105
-    mysql_url = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+    # URL base de conexión
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
     
-    # Si hay host remoto (no localhost), añadimos los parámetros de SSL requeridos por TiDB
+    # Si estamos conectando a la nube (TiDB Cloud), forzamos SSL mediante connect_args
     if MYSQL_HOST != 'localhost':
-        SQLALCHEMY_DATABASE_URI = f"{mysql_url}?ssl_verify_cert=true"
-    else:
-        SQLALCHEMY_DATABASE_URI = mysql_url
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "ssl": {
+                    "ssl_mode": "VERIFY_IDENTITY"
+                }
+            }
+        }
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
