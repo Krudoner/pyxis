@@ -15,7 +15,7 @@ class Config:
     MYSQL_PORT = int(os.environ.get('MYSQL_PORT', 4000))
     MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
     
-    # Codificamos la contraseña para evitar que caracteres especiales rompan la URL
+    # Codificamos la contraseña para seguridad en la URL
     raw_password = os.environ.get('MYSQL_PASSWORD', '')
     MYSQL_PASSWORD = quote_plus(raw_password) if raw_password else ''
     
@@ -26,15 +26,18 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # Configuración de la URI con SSL obligatorio para TiDB Cloud
+    # URL completamente limpia, sin parámetros SSL al final
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+
+    # Pasamos el certificado SSL directamente al motor de PyMySQL mediante un diccionario
     if MYSQL_HOST != 'localhost':
-        # Añadimos la ruta de certificados de Render y la verificación de identidad
-        SQLALCHEMY_DATABASE_URI = (
-            f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-            f"?ssl_ca=/etc/ssl/certs/ca-certificates.crt&ssl_verify_cert=true&ssl_verify_identity=true"
-        )
-    else:
-        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "ssl": {
+                    "ca": "/etc/ssl/certs/ca-certificates.crt"
+                }
+            }
+        }
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
