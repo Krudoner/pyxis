@@ -21,16 +21,22 @@ class Config:
     else:
         MYSQL_DB = os.environ.get('MYSQL_DB', 'pyxis_dev')
 
-    # URL base de conexión estándar
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-    
-    # Configuración de SSL obligatoria para TiDB Cloud Serverless
+    # Configuración de la URI con SSL obligatorio para TiDB Cloud mediante parámetros en la URL
     if MYSQL_HOST != 'localhost':
+        # TiDB Cloud exige SSL; pasamos el argumento ssl a PyMySQL a través de la query string
+        SQLALCHEMY_DATABASE_URI = (
+            f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+            f"?ssl_verify_cert=true"
+        )
         SQLALCHEMY_ENGINE_OPTIONS = {
             "connect_args": {
-                "ssl": {}
+                "ssl": {
+                    "check_hostname": False
+                }
             }
         }
+    else:
+        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
